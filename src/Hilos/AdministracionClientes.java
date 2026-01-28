@@ -51,7 +51,7 @@ public class AdministracionClientes implements Runnable {
                 }
                datos_recibidos = datos_recibidos.trim();
 
-                // Administra el cierre del cliente cuando sale del chat
+                // Administra el cierre del cliente cuando sale del chat, en el propio hilo
                 if (datos_recibidos.equals("/salir")){
                     System.out.println("Cliente "+ CoreCliente.nombre + " solicitó salir del chat");
                     break;

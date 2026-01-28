@@ -7,6 +7,9 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+/**
+ * Permite conectar al servidor clientes
+ */
 public class ClienteConexion {
     private final String HOST;
     private final int PUERTO;
