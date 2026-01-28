@@ -15,18 +15,25 @@ public class ClienteConexion {
     private PrintWriter escritor = null;
     private BufferedReader lector = null;
 
+    // Constructor
     public ClienteConexion(String HOST, int PUERTO) {
         this.HOST = HOST;
         this.PUERTO = PUERTO;
     }
 
+    /**
+     * Establece la conexión del cliente con el servidor
+     * @return true/false si se conecta o no
+     */
     public boolean establecer_conexion(){
         try{
             InetSocketAddress dir = new InetSocketAddress(HOST, PUERTO);
             socket = new Socket();
             socket.connect(dir, 5000);
 
+            // Para enviar mensajes a otros escritores
             escritor = new PrintWriter(socket.getOutputStream(), true);
+            // Para recibir mensajes de otros escritores
             lector = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             return true;
 
@@ -36,8 +43,12 @@ public class ClienteConexion {
         }
     }
 
+    /**
+     * Cierra la conexión del cliente con el servidor
+     */
     public void cerrar_conexion(){
         try {
+            // Verifica si está conectado y lo cierra
             if (socket != null && !socket.isClosed()) {
                 System.out.println("Conexión cerrada");
                 socket.close();
@@ -48,14 +59,31 @@ public class ClienteConexion {
         }
     }
 
+    /**
+     * Función de testeo para comprobar que los mensajes se enviaban
+     * @param mensaje datos a enviar
+     */
     public void enviar_recibir(String mensaje){
-//        if (escritor == null || lector == null) {
-//            return "Error: Conexión no establecida.";
-//        }
         System.out.println(mensaje);
         escritor.println(mensaje);
-        //return lector.readLine();
-
+        //return lector.readLine(); // Esto ya no es necesario aquí
     }
+
+    /**
+     * Proporciona el lector para recibir mensajes del servidor.
+     * @return BufferedReader para la entrada del socket.
+     */
+    public BufferedReader getLector() {
+        return lector;
+    }
+
+    /**
+     * Proporciona el escritor para enviar mensajes al servidor.
+     * @return PrintWriter para la salida del socket.
+     */
+    public PrintWriter getEscritor() {
+        return escritor;
+    }
+
 
 }

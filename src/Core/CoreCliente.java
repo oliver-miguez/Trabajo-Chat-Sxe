@@ -1,52 +1,57 @@
 package Core;
 
 import Conexion.ClienteConexion;
+import Hilos.HiloEscuchaCliente; // Importar el nuevo hilo de escucha
 
+import java.io.BufferedReader;
+import java.io.PrintWriter;
 import java.util.Scanner;
 
 public class CoreCliente {
+    // Conexión
     private static final String HOST = "localhost";
     private static final int PUERTO = 6666;
 
+    // Nombre de cada Hilo
     public static String nombre = "";
 
     public static void main(String[] args) {
         ClienteConexion cliente = new ClienteConexion(HOST, PUERTO);
         Scanner sc = new Scanner(System.in);
         String mensaje_chat = "";
-        String opcion_chat;
+
 
         if (!cliente.establecer_conexion()){
             System.out.println("No se puedo conectar con el servidor. Cerrando");
+            sc.close(); // Asegurarse de cerrar el scanner
             return;
         }
 
         System.out.println("Introduce tu nickname: ");
         String nickname = sc.nextLine();
-        nombre = nickname; // Para enviar al servidor o otros clientes
-        mensaje_chat = mensaje_enviar(sc);
+        nombre = nickname;
 
-        while(!mensaje_chat.equals("/salir")) {
-            cliente.enviar_recibir(nombre + ": " + mensaje_chat);
-            mensaje_chat = mensaje_enviar(sc);
+        // Iniciar hilo para escuchar mensajes del servidor
+        BufferedReader lectorServidor = cliente.getLector();
+        Thread hiloEscucha = new Thread(new HiloEscuchaCliente(lectorServidor));
+        hiloEscucha.start();
 
+        PrintWriter escritorServidor = cliente.getEscritor();
+
+        System.out.println("Escribe tu mensaje (o '/salir' para desconectar):");
+        while (true) {
+            mensaje_chat = sc.nextLine();
+
+            if (mensaje_chat.equalsIgnoreCase("/salir")) {
+                escritorServidor.println(nombre + " se ha desconectado.");
+                break;
+            }
+            escritorServidor.println(nombre + ": " + mensaje_chat);
         }
-        // Cuando el cliente sale del chat
-        mensaje_chat = nombre + " salió del chat";
-        cliente.enviar_recibir(mensaje_chat);
 
         //Cerrar Cliente
         cliente.cerrar_conexion();
         sc.close();
+        hiloEscucha.interrupt(); // Interrumpir el hilo de escucha al salir
     }
-
-    public static String mensaje_enviar(Scanner scanner){
-        System.out.println(":"); // Apartado donde introducimos el mensaje que queremos enviar
-        //scanner.nextLine();
-        String msg_chat = scanner.nextLine();
-        return msg_chat;
-    }
-
-
-
 }

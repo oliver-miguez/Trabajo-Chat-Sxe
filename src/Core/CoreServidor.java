@@ -7,11 +7,12 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.CopyOnWriteArrayList; // Importar para la lista concurrente
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Recibe a cada uno de los clientes
+ * Recibe a cada uno de los clientes y gestiona la lógica del chat.
  */
 public class CoreServidor {
     private static final int PUERTO = 6666;
@@ -20,43 +21,90 @@ public class CoreServidor {
     // Contador de hilos para evitar bloqueos y posibles bugs
     public static java.util.concurrent.atomic.AtomicInteger contador_clientes = new java.util.concurrent.atomic.AtomicInteger(0);
 
+    // Lista segura para hilos para mantener un registro de todos los clientes conectados.
+    private final CopyOnWriteArrayList<AdministracionClientes> listaHilosClientes;
+
+    /**
+     * Constructor para inicializar el servidor y la lista de clientes.
+     */
+    public CoreServidor() {
+        this.listaHilosClientes = new CopyOnWriteArrayList<>();
+    }
+
+    /**
+     * Añade un hilo de cliente a la lista de clientes conectados.
+     * @param hiloCliente El hilo de AdministracionClientes a añadir.
+     */
+    public void agregarHiloCliente(AdministracionClientes hiloCliente) {
+        listaHilosClientes.add(hiloCliente);
+        System.out.println("Cliente añadido. Clientes conectados: " + listaHilosClientes.size());
+    }
+
+    /**
+     * Elimina un hilo de cliente de la lista de clientes conectados.
+     * Esto ocurre cuando un cliente se desconecta.
+     * @param hiloCliente El hilo de AdministracionClientes a eliminar.
+     */
+    public void eliminarHiloCliente(AdministracionClientes hiloCliente) {
+        listaHilosClientes.remove(hiloCliente);
+        System.out.println("Cliente eliminado. Clientes conectados: " + listaHilosClientes.size());
+    }
+
+    /**
+     * Difunde un mensaje a todos los clientes conectados, excepto al remitente.
+     * @param mensaje El mensaje a difundir.
+     * @param remitente El hilo del cliente que envió el mensaje original.
+     */
+    public void difundirMensaje(String mensaje, AdministracionClientes remitente) {
+        for (AdministracionClientes hiloCliente : listaHilosClientes) {
+            if (hiloCliente != remitente) {
+                hiloCliente.enviarMensaje(mensaje);
+            }
+        }
+    }
+
     public static void main(String[] args) throws IOException {
+        // Crear una instancia de CoreServidor para gestionar el estado.
+        CoreServidor servidor = new CoreServidor();
         boolean encendido = true;
+        // Administra los hilos que se pueden ejecutar
         ExecutorService poolHilos = Executors.newFixedThreadPool(MAX_CLIENTES);
-        ServerSocket servidor = new ServerSocket();
+        ServerSocket socketServidor = new ServerSocket();
         try {
             InetSocketAddress dir = new InetSocketAddress(PUERTO);
-            servidor.bind(dir);
+            socketServidor.bind(dir);
 
-            // Cada 5 segundos, el accept "despierta" aunque no haya clientes
-                servidor.setSoTimeout(5000);
-                System.out.println("Servidor a la escucha...");
+            // Cada 10 segundos, el accept "despierta" aunque no haya clientes
+            socketServidor.setSoTimeout(10000); // Tiempo que espera antes de cerrarse si no se conectó ningún usuario
+            System.out.println("Servidor a la escucha...");
 
 
             while (encendido) {
                 try {
+                    // Muestra un texto inicial para indicar que no hay ningún cliente conectado
                     if (contador_clientes.get() == 0) {
                         System.out.println("No hay nadie por aquí");
                     }
-                    Socket socket = servidor.accept();
+                    // Acepta al cliente
+                    Socket socketCliente = socketServidor.accept();
+                    // Amplía el contador de clientes y lo muestra por consola
                     contador_clientes.incrementAndGet();
                     System.out.println("Actualmente hay : " + contador_clientes.get()+ " usuarios en este chat");
-                    //System.out.println("Parece que no hay nadie por aquí");
-                    //System.out.println("Se está conectado un cliente");
 
                     // Atender a cada hilo independientemente
-                    AdministracionClientes administracionClientes = new AdministracionClientes(socket);
+                    AdministracionClientes administracionClientes = new AdministracionClientes(socketCliente, servidor);
+                    servidor.agregarHiloCliente(administracionClientes);
                     // Asigna una hilo a cada cliente para administrar tareas
                     poolHilos.execute(administracionClientes);
 
                 }catch (SocketTimeoutException e){
-                    //System.out.println("Tiempo de espera agotado");
+                    // Cuando no se conecta durante un 10 segundos un cliente salta esta Exception, cerrando el servidor
                     if(contador_clientes.get()==0){
                         System.out.println("Cerrando el servidor...");
-                        encendido = false;
+                        encendido = false; // Evita que vuelva a ejecutar el while
                     }
                     else{
-                        System.out.println(".");
+                        System.out.println();// Mientras el tiempo de espera hasta que se cierre el servidor(10s) no muestra nada
                     }
                 } // Permite volver a mostrar por pantalla que no hay ningún cliente
             }
@@ -76,8 +124,8 @@ public class CoreServidor {
             } catch (InterruptedException e) {
                 poolHilos.shutdownNow();
             }
-            if (!servidor.isClosed()) {
-                servidor.close();
+            if (!socketServidor.isClosed()) {
+                socketServidor.close();
             }
             System.out.println("Servidor. Fin del programa.");
         }
