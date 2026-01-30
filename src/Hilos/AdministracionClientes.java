@@ -19,6 +19,11 @@ public class AdministracionClientes implements Runnable {
     private PrintWriter escritor; // Declarar como campo de instancia
     private String nombreCliente; // Almacena el nombre del cliente
 
+    /**
+     * Constructor para la clase AdministracionClientes.
+     * @param socketCliente El socket del cliente que se ha conectado.
+     * @param servidor La instancia del servidor principal, para comunicación y gestión.
+     */
     public AdministracionClientes(Socket socketCliente, Core.CoreServidor servidor) {
         this.socketCliente = socketCliente;
         this.servidor = servidor;
@@ -42,6 +47,12 @@ public class AdministracionClientes implements Runnable {
         return nombreCliente;
     }
 
+    /**
+     * Método principal que se ejecuta en el hilo del cliente.
+     * Lee el nombre del cliente, y luego entra en un bucle para leer y procesar
+     * los mensajes entrantes. Gestiona los comandos especiales como /salir, /lista, y /ping.
+     * Al finalizar, se encarga de la limpieza y desconexión del cliente.
+     */
     @Override
     public void run() {
         String datos_recibidos;

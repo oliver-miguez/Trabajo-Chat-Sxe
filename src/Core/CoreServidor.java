@@ -64,6 +64,10 @@ public class CoreServidor {
         }
     }
 
+    /**
+     * Devuelve una lista de los nombres de todos los clientes conectados actualmente.
+     * @return Una lista de Strings con los nombres de los clientes.
+     */
     public List<String> getNombresClientes(){
         List<String> nombres = new CopyOnWriteArrayList<>();
         for (AdministracionClientes hiloCliente : listaHilosClientes) {
@@ -72,6 +76,13 @@ public class CoreServidor {
         return nombres;
     }
 
+    /**
+     * Punto de entrada principal para la aplicación del servidor.
+     * Inicializa el servidor, lo pone a la escucha de nuevas conexiones de clientes,
+     * y gestiona el ciclo de vida de los hilos de los clientes.
+     * @param args Argumentos de la línea de comandos (no se utilizan).
+     * @throws IOException Si ocurre un error de E/S al crear el socket del servidor.
+     */
     public static void main(String[] args) throws IOException {
         // Crear una instancia de CoreServidor para gestionar el estado.
         CoreServidor servidor = new CoreServidor();

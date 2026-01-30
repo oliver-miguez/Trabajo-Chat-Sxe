@@ -18,6 +18,13 @@ public class CoreCliente {
     // Nombre de cada Hilo
     public static String nombre = "";
 
+    /**
+     * Punto de entrada principal para la aplicación del cliente.
+     * Establece la conexión con el servidor, solicita un nombre de usuario,
+     * inicia un hilo para escuchar los mensajes del servidor y entra en un bucle
+     * para leer la entrada del usuario y enviarla al servidor.
+     * @param args Argumentos de la línea de comandos (no se utilizan).
+     */
     public static void main(String[] args) {
         ClienteConexion cliente = new ClienteConexion(HOST, PUERTO);
         Scanner sc = new Scanner(System.in);
