@@ -2,11 +2,13 @@ package Core;
 
 import Hilos.AdministracionClientes;
 
+import javax.net.ssl.*;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.security.KeyStore;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList; // Importar para la lista concurrente
 import java.util.concurrent.ExecutorService;
@@ -14,6 +16,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Recibe a cada uno de los clientes y gestiona la lógica del chat.
+ * MODIFICADO: Ahora utiliza SSLServerSocket para una comunicación cifrada.
  */
 public class CoreServidor {
     private static final int PUERTO = 6666;
@@ -78,27 +81,42 @@ public class CoreServidor {
 
     /**
      * Punto de entrada principal para la aplicación del servidor.
-     * Inicializa el servidor, lo pone a la escucha de nuevas conexiones de clientes,
+     * Inicializa el servidor SSL, lo pone a la escucha de nuevas conexiones de clientes,
      * y gestiona el ciclo de vida de los hilos de los clientes.
      * @param args Argumentos de la línea de comandos (no se utilizan).
-     * @throws IOException Si ocurre un error de E/S al crear el socket del servidor.
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         // Crear una instancia de CoreServidor para gestionar el estado.
         CoreServidor servidor = new CoreServidor();
         boolean encendido = true;
         // Administra los hilos que se pueden ejecutar
         ExecutorService poolHilos = Executors.newFixedThreadPool(MAX_CLIENTES);
-        ServerSocket socketServidor = new ServerSocket();
+        SSLServerSocket socketServidor = null;
         try {
-            // Puerto al que se conecta
-            InetSocketAddress dir = new InetSocketAddress(PUERTO);
-            socketServidor.bind(dir);
+            // INICIO DE LA CONFIGURACIÓN SSL
+            // Cargar el Keystore, que contiene el certificado y la clave privada del servidor.
+            char[] password = "admin123".toCharArray(); // La misma contraseña que añadí en el comando keytool.
+            KeyStore ks = KeyStore.getInstance("JKS");
+            FileInputStream fis = new FileInputStream("keystore.jks"); // El archivo debe estar en la raíz del proyecto.
+            ks.load(fis, password);
+
+            // Configurar el KeyManagerFactory para gestionar las claves.
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            kmf.init(ks, password);
+
+            // Configurar el SSLContext para usar el protocolo TLS.
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(kmf.getKeyManagers(), null, null);
+
+            // Usar la fábrica de SSLServerSocket para crear el socket seguro.
+            SSLServerSocketFactory ssf = sc.getServerSocketFactory();
+            socketServidor = (SSLServerSocket) ssf.createServerSocket(PUERTO);
+            // --- FIN DE LA CONFIGURACIÓN SSL ---
 
             // Tiempo que el socket del servidor se mantendrá abierto hasta que se conecte 1 cliente mínimo
             // Al acabarse este tiempo si no se conecto nadie, saltará SocketTimeoutException
             socketServidor.setSoTimeout(10000);
-            System.out.println("Servidor a la escucha...");
+            System.out.println("Servidor SSL a la escucha en el puerto " + PUERTO + "...");
 
             while (encendido) {
                 try {
@@ -106,7 +124,7 @@ public class CoreServidor {
                     if (contador_clientes.get() == 0) {
                         System.out.println("No hay nadie por aquí");
                     }
-                    // Acepta al cliente
+                    // Acepta al cliente. El socket devuelto ya es un SSLSocket.
                     Socket socketCliente = socketServidor.accept();
                     // Amplía el contador de clientes y lo muestra por consola
                     contador_clientes.incrementAndGet();
@@ -132,7 +150,8 @@ public class CoreServidor {
             }
 
         } catch (Exception e) {
-            System.out.println("Error general en en código: " + e.getMessage());
+            System.out.println("Error general en en código (puede ser un problema de SSL/TLS): " + e.getMessage());
+            e.printStackTrace();
         }finally {
 
             System.out.println("Iniciando proceso de apagado...");
@@ -146,8 +165,12 @@ public class CoreServidor {
             } catch (InterruptedException e) {
                 poolHilos.shutdownNow();
             }
-            if (!socketServidor.isClosed()) {
-                socketServidor.close();
+            if (socketServidor != null && !socketServidor.isClosed()) {
+                try {
+                    socketServidor.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
             System.out.println("Servidor. Fin del programa.");
         }

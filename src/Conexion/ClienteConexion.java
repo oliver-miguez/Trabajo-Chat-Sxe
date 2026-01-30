@@ -1,14 +1,13 @@
 package Conexion;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.InetSocketAddress;
+import javax.net.ssl.*;
+import java.io.*;
 import java.net.Socket;
+import java.security.KeyStore;
 
 /**
- * Permite conectar al servidor clientes
+ * Permite conectar al servidor clientes.
+ * MODIFICADO: Ahora utiliza SSLSocket para una conexión cifrada y segura.
  */
 public class ClienteConexion {
     private final String HOST;
@@ -25,14 +24,30 @@ public class ClienteConexion {
     }
 
     /**
-     * Establece la conexión del cliente con el servidor
-     * @return true/false si se conecta o no
+     * Establece la conexión segura (SSL/TLS) del cliente con el servidor.
+     * @return true/false si se conecta o no.
      */
     public boolean establecer_conexion(){
         try{
-            InetSocketAddress dir = new InetSocketAddress(HOST, PUERTO);
-            socket = new Socket();
-            socket.connect(dir, 5000);
+            // INICIO DE LA CONFIGURACIÓN SSL PARA EL CLIENTE
+            // Cargar el TrustStore: Usamos el mismo keystore.jks, pero ahora como almacén de confianza.
+            // El cliente lo usa para verificar que el certificado del servidor es de confianza.
+            char[] password = "admin123".toCharArray(); // La misma contraseña que usé en el comando keytool.
+            KeyStore ts = KeyStore.getInstance("JKS");
+            FileInputStream fis = new FileInputStream("keystore.jks"); // El archivo debe estar en la raíz del proyecto.
+            ts.load(fis, password);
+
+            // Configurar el TrustManagerFactory para gestionar los certificados de confianza.
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(ts);
+
+            // Configurar el SSLContext para usar el protocolo TLS y nuestros TrustManagers.
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, tmf.getTrustManagers(), null);
+
+            // Usar la fábrica de SSLSocket para crear el socket seguro y conectarlo.
+            SSLSocketFactory ssf = sc.getSocketFactory();
+            socket = (SSLSocket) ssf.createSocket(HOST, PUERTO);
 
             // Para enviar mensajes a otros escritores
             escritor = new PrintWriter(socket.getOutputStream(), true);
@@ -40,8 +55,9 @@ public class ClienteConexion {
             lector = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             return true;
 
-        } catch (IOException e) {
-            System.out.println("Error al establecer la conexión del cliente: "+e.getMessage());
+        } catch (Exception e) { // Capturamos Exception para cubrir errores de SSL (ej. certificado no confiable)
+            System.out.println("Error al establecer la conexión SSL del cliente: "+e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -87,6 +103,4 @@ public class ClienteConexion {
     public PrintWriter getEscritor() {
         return escritor;
     }
-
-
 }
