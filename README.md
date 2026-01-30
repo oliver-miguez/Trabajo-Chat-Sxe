@@ -64,3 +64,27 @@ El proyecto está organizado en los siguientes paquetes y clases:
 3.  **Comandos:**
     -   Los comandos comienzan con una barra (`/`).
     -   El servidor los interpreta y realiza la acción correspondiente.
+
+---
+
+###  Comunicación Segura (SSL/TLS)
+
+Este proyecto ha sido migrado para utilizar comunicación cifrada mediante SSL/TLS, garantizando la confidencialidad e integridad de los mensajes intercambiados entre el cliente y el servidor. Para ello, se utilizan `SSLServerSocket` en el servidor y `SSLSocket` en los clientes.
+
+#### Requisitos para la Ejecución con SSL/TLS
+
+Para que la comunicación cifrada funcione, es necesario un archivo `keystore.jks` que contiene el certificado del servidor y que los clientes utilizan como almacén de confianza.
+
+**Generación del `keystore.jks`:**
+
+El archivo `keystore.jks` ha sido generado automáticamente para este proyecto. Si por alguna razón necesitas generarlo de nuevo, puedes usar el siguiente comando desde la raíz del proyecto, asumiendo que tienes la carpeta `bin` de tu JDK en tu `PATH` o ejecutándolo desde esa carpeta `bin`:
+
+```bash
+keytool -genkeypair -alias sxe_chat -keyalg RSA -keysize 2048 -keystore keystore.jks -validity 365 -storepass admin123 -keypass admin123 -dname "CN=localhost" -deststoretype JKS
+```
+
+**Contraseña del Keystore/Truststore:**
+
+La contraseña utilizada para el `keystore.jks` (tanto para el servidor como para el cliente) es: `admin123`. Esta contraseña está programada directamente en `CoreServidor.java` y `ClienteConexion.java`.
+
+**Asegúrate de que el archivo `keystore.jks` se encuentre en la raíz del proyecto (`Chat_SXE/keystore.jks`) antes de ejecutar el servidor o los clientes.**
