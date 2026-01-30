@@ -1,0 +1,1 @@
+typeSearchIndex = [{"p":"Hilos","l":"AdministracionClientes"},{"l":"All Classes and Interfaces","u":"allclasses-index.html"},{"p":"Conexion","l":"ClienteConexion"},{"p":"Core","l":"CoreCliente"},{"p":"Core","l":"CoreServidor"},{"p":"Hilos","l":"HiloEscuchaCliente"}];updateSearchResults();
