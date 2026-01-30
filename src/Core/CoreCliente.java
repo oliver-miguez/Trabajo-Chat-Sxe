@@ -41,8 +41,11 @@ public class CoreCliente {
         hiloEscucha.start();
 
         PrintWriter escritorServidor = cliente.getEscritor();
+        escritorServidor.println(nombre); // Enviar nickname inmediatamente después de obtener el escritor
 
         System.out.println("Escribe tu mensaje (o '/salir' para desconectar):");
+        System.out.println("Escribe '/lista' para ver todos los clientes conectados en el servidor" );
+        System.out.println("Escribe '/ping' para verificar la conexión con el servidor" );
 
         // Administración de introducción de datos o mensaje de cada cliente
         while (true) {
@@ -50,10 +53,15 @@ public class CoreCliente {
 
             // Si el mensaje es salir , cierra el cliente
             if (mensaje_chat.equalsIgnoreCase("/salir")) {
-                escritorServidor.println(nombre + " se ha desconectado.");
+                escritorServidor.println("/salir");
                 break;
+            } else if (mensaje_chat.equalsIgnoreCase("/lista")) {
+                escritorServidor.println("/lista");
+            } else if (mensaje_chat.equalsIgnoreCase("/ping")) {
+                escritorServidor.println("/ping");
+            } else {
+                escritorServidor.println(mensaje_chat);
             }
-            escritorServidor.println(nombre + ": " + mensaje_chat); // El PrinterWriter recibe los datos y se utilizan para enviarlos al Servidor
         }
 
         //Cerrar Cliente

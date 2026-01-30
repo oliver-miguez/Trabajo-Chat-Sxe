@@ -26,7 +26,7 @@ public class HiloEscuchaCliente implements Runnable {
                 System.out.println(mensajeRecibido); // Mostrar el mensaje en la consola del cliente
             }
         } catch (IOException e) {
-            System.out.println("Error al leer mensajes del servidor: " + e.getMessage());
+            System.out.println( e.getMessage());
         } finally {
             try {
                 if (lectorServidor != null) {

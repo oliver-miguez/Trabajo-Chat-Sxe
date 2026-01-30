@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList; // Importar para la lista concurrente
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,6 +64,14 @@ public class CoreServidor {
         }
     }
 
+    public List<String> getNombresClientes(){
+        List<String> nombres = new CopyOnWriteArrayList<>();
+        for (AdministracionClientes hiloCliente : listaHilosClientes) {
+            nombres.add(hiloCliente.getNombreCliente());
+        }
+        return nombres;
+    }
+
     public static void main(String[] args) throws IOException {
         // Crear una instancia de CoreServidor para gestionar el estado.
         CoreServidor servidor = new CoreServidor();
@@ -71,13 +80,14 @@ public class CoreServidor {
         ExecutorService poolHilos = Executors.newFixedThreadPool(MAX_CLIENTES);
         ServerSocket socketServidor = new ServerSocket();
         try {
+            // Puerto al que se conecta
             InetSocketAddress dir = new InetSocketAddress(PUERTO);
             socketServidor.bind(dir);
 
-            // Cada 10 segundos, el accept "despierta" aunque no haya clientes
-            socketServidor.setSoTimeout(10000); // Tiempo que espera antes de cerrarse si no se conectó ningún usuario
+            // Tiempo que el socket del servidor se mantendrá abierto hasta que se conecte 1 cliente mínimo
+            // Al acabarse este tiempo si no se conecto nadie, saltará SocketTimeoutException
+            socketServidor.setSoTimeout(10000);
             System.out.println("Servidor a la escucha...");
-
 
             while (encendido) {
                 try {
@@ -89,6 +99,7 @@ public class CoreServidor {
                     Socket socketCliente = socketServidor.accept();
                     // Amplía el contador de clientes y lo muestra por consola
                     contador_clientes.incrementAndGet();
+                    // Muestra en pantalla el total de clientes conectados
                     System.out.println("Actualmente hay : " + contador_clientes.get()+ " usuarios en este chat");
 
                     // Atender a cada hilo independientemente

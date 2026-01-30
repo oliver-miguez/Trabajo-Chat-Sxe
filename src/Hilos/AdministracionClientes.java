@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.List;
 
 /**
  * Administra los mensajes de cada cliente y cierra el cliente si es necesario
@@ -16,8 +17,8 @@ public class AdministracionClientes implements Runnable {
     private final Socket socketCliente;
     private final Core.CoreServidor servidor; // Referencia al servidor para difundir mensajes y gestión
     private PrintWriter escritor; // Declarar como campo de instancia
+    private String nombreCliente; // Almacena el nombre del cliente
 
-    // Constructor
     public AdministracionClientes(Socket socketCliente, Core.CoreServidor servidor) {
         this.socketCliente = socketCliente;
         this.servidor = servidor;
@@ -33,43 +34,64 @@ public class AdministracionClientes implements Runnable {
         }
     }
 
+    /**
+     * Devuelve el nombre de este cliente.
+     * @return El nombre del cliente.
+     */
+    public String getNombreCliente() {
+        return nombreCliente;
+    }
+
     @Override
     public void run() {
         String datos_recibidos;
         try {
-            // Recibir los datos de cada cliente
             BufferedReader lector = new BufferedReader(new InputStreamReader(socketCliente.getInputStream()));
-            // Envía mensajes al resto
             escritor = new PrintWriter(socketCliente.getOutputStream(), true);
 
-            // Ajustes del mensaje recibido
+            // La primera línea es el nombre del cliente
+            nombreCliente = lector.readLine();
+            if (nombreCliente == null) {
+                return; // Cliente desconectado prematuramente
+            }
+            System.out.println("Cliente " + nombreCliente + " conectado.");
+            servidor.difundirMensaje("Servidor: " + nombreCliente + " se ha unido al chat.", this);
+
             while (true){
                 datos_recibidos = lector.readLine();
 
                 if (datos_recibidos == null){
                     break;
                 }
-               datos_recibidos = datos_recibidos.trim();
 
-                // Administra el cierre del cliente cuando sale del chat, en el propio hilo
-                if (datos_recibidos.equals("/salir")){
-                    System.out.println("Cliente "+ CoreCliente.nombre + " solicitó salir del chat");
-                    break;
+                datos_recibidos = datos_recibidos.trim();
+
+                if (datos_recibidos.equalsIgnoreCase("/salir")){
+                    break; // Salir del bucle, se gestionará en finally
                 }
-
-                // Difunde el mensaje al resto de clientes y servidor
-                this.servidor.difundirMensaje(datos_recibidos, this);
-                System.out.println(datos_recibidos);
+                else if(datos_recibidos.equalsIgnoreCase("/lista")){
+                    List<String> nombresClientes = servidor.getNombresClientes();
+                    enviarMensaje("Clientes conectados: " + String.join(", ", nombresClientes));
+                }
+                else if (datos_recibidos.equalsIgnoreCase("/ping")) {
+                    enviarMensaje("pong");
+                }
+                else{
+                    servidor.difundirMensaje(nombreCliente + ": " + datos_recibidos, this);
+                    System.out.println(nombreCliente + ": " + datos_recibidos);
+                }
             }
 
         }catch (IOException e){
-            System.out.println("Error con la ejecución del hilo de cliente: " + e.getMessage());
+            System.out.println("Error con la ejecución del hilo de cliente " + nombreCliente + ": " + e.getMessage());
         }
         finally {
             // Eliminar este hilo de cliente de la lista del servidor
             servidor.eliminarHiloCliente(this);
             // Resta al contador de clientes activos en el chat
             CoreServidor.contador_clientes.decrementAndGet();
+            System.out.println("Cliente " + nombreCliente + " desconectado.");
+            servidor.difundirMensaje("Servidor: " + nombreCliente + " se ha desconectado.", this);
             // Asegurarse de que cierre el socket del cliente
             try {
                 if (socketCliente != null && !socketCliente.isClosed()) {
